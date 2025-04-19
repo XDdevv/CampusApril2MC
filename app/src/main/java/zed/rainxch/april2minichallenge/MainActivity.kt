@@ -21,12 +21,16 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -48,6 +52,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import zed.rainxch.april2minichallenge.data.Egg
 import zed.rainxch.april2minichallenge.ui.theme.April2MiniChallengeTheme
 import zed.rainxch.april2minichallenge.ui.theme.BlueDark
 import zed.rainxch.april2minichallenge.ui.theme.Brown
@@ -60,6 +65,7 @@ import zed.rainxch.april2minichallenge.ui.theme.Yellow1
 import zed.rainxch.april2minichallenge.ui.theme.Yellow2
 import zed.rainxch.april2minichallenge.ui.theme.Yellow3
 import zed.rainxch.april2minichallenge.ui.theme.Yellow4
+import java.util.function.UnaryOperator
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -68,7 +74,7 @@ class MainActivity : ComponentActivity() {
         setContent {
             April2MiniChallengeTheme {
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    EggHuntScreen(modifier = Modifier.padding(innerPadding))
+                    EggHuntScreen(modifier = Modifier.background(BlueDark).padding(innerPadding))
                 }
             }
         }
@@ -83,8 +89,7 @@ var nunitoBold = FontFamily(Font(R.font.nunito_semi_bold))
 fun EggHuntScreen(modifier: Modifier = Modifier) {
     Column(
         modifier = modifier
-            .fillMaxSize()
-            .background(BlueDark),
+            .fillMaxSize(),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         val textGradient = Brush.horizontalGradient(
@@ -95,23 +100,46 @@ fun EggHuntScreen(modifier: Modifier = Modifier) {
             )
         )
 
-        var eggs by remember {
-            mutableStateOf(
-                mutableListOf<EggItem>(
-                    EggItem("Behind the TV stand"),
-                    EggItem("In the garden shed"),
-                    EggItem("In the garden shed"),
-                    EggItem("Inside the birdhouse"),
-                    EggItem("Behind the garden bushes"),
-                    EggItem("Inside the flower pot"),
-                    EggItem("In the mailbox"),
-                    EggItem("In the kitchen pantry")
-                )
+        val buttonGradient = Brush.verticalGradient(
+            colors = listOf(
+                Color(0xffFFC441),
+                Color(0xffEDA616),
+                Color(0xffE09723),
+                Color(0xffCA7500)
+            )
+        )
+
+        var eggs = remember {
+            mutableStateListOf(
+                EggItem("Behind the TV stand"),
+                EggItem("In the garden shed"),
+                EggItem("In the garden shed"),
+                EggItem("Inside the birdhouse"),
+                EggItem("Behind the garden bushes"),
+                EggItem("Inside the flower pot"),
+                EggItem("In the mailbox"),
+                EggItem("In the kitchen pantry")
             )
         }
 
         val totalEggs = eggs.size
-        var selectedEggs by remember { mutableStateOf(eggs.filter { it.isChecked }.size) }
+        val selectedEggs by remember {
+            derivedStateOf {
+                eggs.count { it.isChecked.value }
+            }
+        }
+
+        var showDialog by remember { mutableStateOf(false) }
+        var isTicked by remember { mutableStateOf(false) }
+
+        if (showDialog) {
+            CustomDialog(
+                onDismiss = {
+                    showDialog = false
+                },
+                isTicked = isTicked
+            )
+        }
 
         Text(
             text = "Egg Hunt Checklist",
@@ -142,21 +170,43 @@ fun EggHuntScreen(modifier: Modifier = Modifier) {
             verticalArrangement = Arrangement.spacedBy(16.dp),
             modifier = Modifier.padding(16.dp)
         ) {
-            itemsIndexed(eggs) { index, egg ->
+            itemsIndexed(eggs.toList()) { index, egg ->
                 EggItem(
                     egg = egg,
                     onCheckedChange = { isChecked, newEgg ->
                         if (isChecked) {
-                            selectedEggs++
+                            showDialog = true
+                            isTicked = true
                         } else {
                             if (selectedEggs > 0) {
-                                selectedEggs--
+                                showDialog = true
+                                isTicked = false
                             }
                         }
                         eggs[index] = newEgg
                     }
                 )
             }
+        }
+
+        Button(
+            onClick = {
+                eggs.forEach { it.isChecked.value = false }
+            },
+            shape = androidx.compose.foundation.shape.RoundedCornerShape(32.dp),
+            colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp)
+                .clip(androidx.compose.foundation.shape.RoundedCornerShape(32.dp))
+                .background(brush = buttonGradient)
+        ) {
+            Text(
+                text = "Reset",
+                fontSize = 16.sp,
+                color = Color.White,
+                fontFamily = nunitoBold
+            )
         }
     }
 }
@@ -168,26 +218,30 @@ fun EggItem(
     egg: EggItem,
     onCheckedChange: (Boolean, EggItem) -> Unit
 ) {
-    var eggIsCheckedState by remember { mutableStateOf(egg.isChecked) }
-    val bgGradient = Brush.verticalGradient(listOf(
-        Yellow1,
-        Yellow2,
-        Yellow3,
-        Yellow4
-    ))
+    val bgGradient = Brush.verticalGradient(
+        listOf(
+            Yellow1,
+            Yellow2,
+            Yellow3,
+            Yellow4
+        )
+    )
 
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .background(if(eggIsCheckedState) bgGradient else SolidColor(Gray), RoundedCornerShape(16.dp))
+            .background(
+                if (egg.isChecked.value) bgGradient else SolidColor(Gray),
+                RoundedCornerShape(16.dp)
+            )
             .padding(12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Checkbox(
-            checked = eggIsCheckedState,
+            checked = egg.isChecked.value,
             onCheckedChange = { isChecked ->
-                eggIsCheckedState = isChecked
-                onCheckedChange(isChecked, egg.copy(isChecked = isChecked))
+                egg.isChecked.value = isChecked
+                onCheckedChange(isChecked, egg)
             },
             colors = CheckboxDefaults.colors(
                 checkedColor = Color.White,
@@ -204,7 +258,8 @@ fun EggItem(
         Text(
             text = egg.locationDescription,
             color = Color.White,
-            modifier = Modifier.padding(4.dp)
+            modifier = Modifier.padding(4.dp),
+            fontFamily = nunitoBold
         )
     }
 }
