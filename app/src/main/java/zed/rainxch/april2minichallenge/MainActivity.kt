@@ -68,7 +68,7 @@ class MainActivity : ComponentActivity() {
         setContent {
             April2MiniChallengeTheme {
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    EggHuntScreen()
+                    EggHuntScreen(modifier = Modifier.padding(innerPadding))
                 }
             }
         }
@@ -120,7 +120,7 @@ fun EggHuntScreen(modifier: Modifier = Modifier) {
                 fontSize = 22.sp,
                 fontFamily = nunitoBlack
             ),
-            modifier = Modifier.padding(top = 20.dp)
+            modifier = Modifier.padding(top = 24.dp)
         )
         Spacer(Modifier.height(36.dp))
         Text(
@@ -135,16 +135,8 @@ fun EggHuntScreen(modifier: Modifier = Modifier) {
             text = "${selectedEggs}/${totalEggs} eggs found",
             color = Color(0xffFFF583),
             fontSize = 16.sp,
-            fontFamily = nunitoBold
+            fontFamily = nunitoBlack
         )
-
-        Button(
-            onClick = {
-                eggs.clear()
-            }
-        ) {
-            Text("Hallo")
-        }
 
         LazyColumn(
             verticalArrangement = Arrangement.spacedBy(16.dp),
@@ -177,19 +169,17 @@ fun EggItem(
     onCheckedChange: (Boolean, EggItem) -> Unit
 ) {
     var eggIsCheckedState by remember { mutableStateOf(egg.isChecked) }
-    val bgColor by remember { mutableStateOf(
-        if(eggIsCheckedState) Brush.verticalGradient(listOf(
-            Yellow1,
-            Yellow2,
-            Yellow3,
-            Yellow4
-        )) else SolidColor(Gray)
-    ) }
+    val bgGradient = Brush.verticalGradient(listOf(
+        Yellow1,
+        Yellow2,
+        Yellow3,
+        Yellow4
+    ))
 
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .background(bgColor, RoundedCornerShape(16.dp))
+            .background(if(eggIsCheckedState) bgGradient else SolidColor(Gray), RoundedCornerShape(16.dp))
             .padding(12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
